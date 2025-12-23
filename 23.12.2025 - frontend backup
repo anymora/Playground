@@ -1,0 +1,2104 @@
+{% comment %}
+Section: two-picture.liquid
+Name im Theme Editor: "Two picture upload AI"
+{% endcomment %}
+
+<section id="tib-simple-design-section" class="tib-simple-design">
+
+  {%- comment -%}
+  MEDIA-SLIDER: Bilder & Videos
+  {%- endcomment -%}
+  <div class="tib-main-media-wrapper">
+    <div class="tib-media-slider" id="tib-media-slider">
+      {% for media in product.media %}
+        {% assign idx = forloop.index0 %}
+        <div class="tib-media-slide" data-index="{{ idx }}">
+          {% case media.media_type %}
+            {% when 'image' %}
+              {%- assign img_classes = 'tib-media-image' -%}
+              {% if forloop.first %}
+                <img
+                  id="tib-main-product-image"
+                  class="{{ img_classes }}"
+                  src="{{ media | image_url: width: 2048 }}"
+                  alt="{{ product.title | escape }}"
+                >
+              {% else %}
+                <img
+                  class="{{ img_classes }}"
+                  src="{{ media | image_url: width: 2048 }}"
+                  alt="{{ product.title | escape }}"
+                >
+              {% endif %}
+
+            {% when 'video' %}
+              {{ media | video_tag: controls: true, class: 'tib-media-video', preload: 'metadata' }}
+              <div class="tib-video-badge">Video hat Ton</div>
+
+            {% when 'external_video' %}
+              {{ media | external_video_tag: class: 'tib-media-video' }}
+              <div class="tib-video-badge">Video hat Ton</div>
+
+            {% else %}
+              {{ media | image_url: width: 2048 | image_tag: class: 'tib-media-image' }}
+          {% endcase %}
+        </div>
+      {% endfor %}
+
+      {% if product.media.size == 0 %}
+        <div class="tib-media-slide" data-index="0">
+          <img
+            id="tib-main-product-image"
+            class="tib-media-image"
+            src="{{ product.featured_image | image_url: width: 2048 }}"
+            alt="{{ product.title | escape }}"
+          >
+        </div>
+      {% endif %}
+    </div>
+
+    {% assign media_count = product.media.size | default: 1 %}
+    {% if media_count > 1 %}
+      <div class="tib-media-dots" id="tib-media-dots">
+        {% for media in product.media %}
+          <button
+            type="button"
+            class="tib-media-dot{% if forloop.first %} is-active{% endif %}"
+            data-index="{{ forloop.index0 }}"
+          ></button>
+        {% endfor %}
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- Inhalt mit seitlichem Abstand -->
+  <div class="tib-inner-padding">
+
+    <!-- Titel + Preis -->
+    <div class="tib-product-headline">
+      <h1 class="tib-product-title">{{ product.title }}</h1>
+      {% assign initial_variant = product.selected_or_first_available_variant %}
+      <div class="tib-price-row">
+        <span id="tib-price-amount" class="tib-price-amount">
+          {{ initial_variant.price | money }}
+        </span>
+        {% if initial_variant.compare_at_price > initial_variant.price %}
+          <span id="tib-compare-price" class="tib-compare-price">
+            {{ initial_variant.compare_at_price | money }}
+          </span>
+        {% else %}
+          <span id="tib-compare-price" class="tib-compare-price" style="display:none;"></span>
+        {% endif %}
+      </div>
+      <p class="tib-price-subtext">
+        inkl. MwSt. und KOSTENLOSEM Versand ab 60€
+      </p>
+    </div>
+
+    {%- comment -%}
+    [META] JSON-LD Product Schema (ändert keine Funktion, hilft Crawlern die Seite sicher als Produktseite zu klassifizieren)
+    {%- endcomment -%}
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Product",
+        "name": {{ product.title | json }},
+        "description": {{ product.description | strip_html | strip_newlines | truncate: 300 | json }},
+        "url": {{ request.origin | append: product.url | json }},
+        "sku": {{ initial_variant.sku | default: initial_variant.id | json }},
+        "brand": {
+          "@type": "Brand",
+          "name": {{ shop.name | json }}
+        },
+        "image": [
+          {% if product.featured_image %}
+            {{ product.featured_image | image_url: width: 2048 | json }}
+          {% endif %}
+        ],
+        "offers": {
+          "@type": "Offer",
+          "priceCurrency": {{ cart.currency.iso_code | json }},
+          "price": {{ initial_variant.price | divided_by: 100.0 | json }},
+          "availability": "{% if initial_variant.available %}https://schema.org/InStock{% else %}https://schema.org/OutOfStock{% endif %}",
+          "url": {{ request.origin | append: product.url | json }}
+        }
+      }
+    </script>
+
+    <!-- Kurztexte -->
+    <ul class="tib-bullets">
+      <li>
+        <img
+          src="{{ 'delivery-light.png' | asset_url }}"
+          alt=""
+          class="tib-bullet-icon"
+        >
+        <span>{{ section.settings.bullet_1_text }}</span>
+      </li>
+      <li>
+        <img
+          src="{{ 'conrise-icon-guarantee.webp' | asset_url }}"
+          alt=""
+          class="tib-bullet-icon"
+        >
+        <span>{{ section.settings.bullet_2_text }}</span>
+      </li>
+    </ul>
+
+    <!-- Produkt-Formular -->
+    <form
+      id="tib-product-form"
+      class="tib-product-form"
+      action="/cart/add"
+      method="post"
+    >
+      <input
+        type="hidden"
+        name="id"
+        id="tib-variant-id"
+        value="{{ initial_variant.id }}"
+      >
+      <input
+        type="hidden"
+        name="quantity"
+        id="tib-quantity-input"
+        value="1"
+      >
+
+      <!-- Personalisierungs-Block -->
+      <div class="tib-upload-block">
+        <div class="tib-upload-header">
+          <span>{{ section.settings.upload_block_title }}</span>
+        </div>
+        <div class="tib-upload-content">
+          <div class="tib-field">
+            <label for="tib-dog-image-simple">{{ section.settings.dog_label }}</label>
+            <p class="tib-field__hint">
+              {{ section.settings.dog_hint }}
+            </p>
+            <input type="file" id="tib-dog-image-simple" accept="image/*">
+            <p class="tib-field__filename" id="tib-dog-filename"></p>
+          </div>
+
+          <div class="tib-field">
+            <label for="tib-jersey-image-simple">{{ section.settings.jersey_label }}</label>
+            <p class="tib-field__hint">
+              {{ section.settings.jersey_hint }}
+            </p>
+            <input type="file" id="tib-jersey-image-simple" accept="image/*">
+            <p class="tib-field__filename" id="tib-jersey-filename"></p>
+          </div>
+
+          <div class="tib-generate-wrapper">
+            <button
+              type="button"
+              id="tib-generate-simple-btn"
+              class="tib-generate-button"
+            >
+              {{ section.settings.button_label }}
+            </button>
+          </div>
+          <p class="tib-generate-note">
+            {{ section.settings.generate_note }}
+          </p>
+
+          <p id="tib-simple-status" class="tib-status"></p>
+
+          <div id="tib-loading" class="tib-loading" style="display:none;">
+            <div class="tib-loading__header">
+              <span class="tib-loading__label">{{ section.settings.loading_label }}</span>
+              <span class="tib-loading__eta">{{ section.settings.loading_eta_text }}</span>
+            </div>
+            <div class="tib-loading-bar">
+              <div class="tib-loading-bar__inner"></div>
+            </div>
+            <p id="tib-loading-fact" class="tib-loading-fact"></p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Variant-Selektoren -->
+      <div class="tib-variant-section">
+        {% assign variants_json = product.variants | json %}
+
+        {% for option in product.options_with_values %}
+          {% if option.values.size > 1 %}
+            {% assign option_index = forloop.index0 %}
+            <div class="tib-variant-option is-open" data-option-index="{{ option_index }}">
+              <button type="button" class="tib-variant-header">
+                <span class="tib-variant-header-label">{{ option.name }}</span>
+                <div class="tib-variant-header-right">
+                  <span class="tib-variant-header-value" data-current-value>
+                    {% if initial_variant %}
+                      {{ initial_variant.options[option_index] }}
+                    {% else %}
+                      {{ option.selected_value | default: option.values.first }}
+                    {% endif %}
+                  </span>
+                  <span class="tib-variant-header-arrow"></span>
+                </div>
+              </button>
+
+              <div class="tib-variant-body">
+                {% for value in option.values %}
+                  {% assign value_image = blank %}
+                  {% for v in product.variants %}
+                    {% if option_index == 0 and v.option1 == value and v.image %}
+                      {% assign value_image = v.image | image_url: width: 400 %}
+                      {% break %}
+                    {% elsif option_index == 1 and v.option2 == value and v.image %}
+                      {% assign value_image = v.image | image_url: width: 400 %}
+                      {% break %}
+                    {% elsif option_index == 2 and v.option3 == value and v.image %}
+                      {% assign value_image = v.image | image_url: width: 400 %}
+                      {% break %}
+                    {% endif %}
+                  {% endfor %}
+
+                  <button
+                    type="button"
+                    class="tib-variant-value-btn{% if initial_variant and initial_variant.options[option_index] == value %} is-active{% endif %}"
+                    data-value="{{ value | escape }}"
+                    {% if value_image != blank and option.name != 'Größe' and option.name != 'Maße' %}
+                    data-has-image="true"
+                    data-image-src="{{ value_image }}"
+                    {% endif %}
+                  >
+                    {% if value_image != blank and option.name != 'Größe' and option.name != 'Maße' %}
+                      <span class="tib-variant-thumb-wrapper">
+                        <img src="{{ value_image }}" alt="{{ value }}" class="tib-variant-thumb">
+                      </span>
+                    {% endif %}
+                    <span class="tib-variant-value-text">{{ value }}</span>
+                  </button>
+                {% endfor %}
+              </div>
+            </div>
+          {% endif %}
+        {% endfor %}
+      </div>
+
+      {%- comment -%} Geschenkblock über dem Lieferungstext {%- endcomment -%}
+      {% if section.settings.show_gift %}
+      <div class="tib-gift-block" id="tib-gift-block">
+        <div class="tib-gift-switch-wrapper">
+          <label class="tib-gift-switch">
+            <input type="checkbox" id="tib-gift-switch" checked>
+            <span class="tib-gift-switch-slider"></span>
+          </label>
+        </div>
+        <div class="tib-gift-main">
+          <div
+            class="tib-gift-image-wrap"
+            style="
+              width: {{ section.settings.gift_image_size | default: 52 }}px;
+              height: {{ section.settings.gift_image_size | default: 52 }}px;
+            "
+          >
+            <img
+              id="tib-gift-image"
+              src="https://cdn.shopify.com/s/files/1/0958/7346/6743/files/IMG_1953.jpg?v=1765551840"
+              alt="{{ section.settings.gift_title | default: 'Fußball Hund Tasse' }}"
+            >
+          </div>
+          <div class="tib-gift-text">
+            {% if section.settings.show_pre_title %}
+              <div
+                class="tib-pre-title"
+                style="
+                  {% if section.settings.pre_title_color %}color: {{ section.settings.pre_title_color }};{% endif %}
+                  {% if section.settings.pre_title_font_size %}font-size: {{ section.settings.pre_title_font_size }}px;{% endif %}
+                "
+              >
+                {{ section.settings.pre_title_text }}
+              </div>
+            {% endif %}
+            <div class="tib-gift-title">
+              {{ section.settings.gift_title | default: "Fußball Hund Tasse" }}
+            </div>
+            <div class="tib-gift-price-row">
+              <span class="tib-gift-price-free">{{ section.settings.gift_free_price_text }}</span>
+              <span class="tib-gift-price-compare" id="tib-gift-compare"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Lieferungstext -->
+      <p id="tib-delivery-text" class="tib-delivery-text"></p>
+
+      <!-- Menge + Add to Cart -->
+      <div class="tib-cart-row">
+        <div class="tib-quantity-box">
+          <button type="button" class="tib-qty-btn tib-qty-minus" aria-label="Menge verringern">−</button>
+          <span id="tib-quantity-display" class="tib-quantity-display">1</span>
+          <button type="button" class="tib-qty-btn tib-qty-plus" aria-label="Menge erhöhen">+</button>
+        </div>
+
+        <button
+          type="submit"
+          class="tib-add-to-cart-button tib-add-to-cart-button2"
+        >
+          {{ section.settings.add_to_cart_label }}
+        </button>
+      </div>
+
+      <p id="tib-cart-success" class="tib-cart-success-message"></p>
+    </form>
+  </div>
+
+  <!-- Modal für Design-Vorschau -->
+  <div id="tib-design-modal" class="tib-modal" style="display:none;">
+    <div class="tib-modal-overlay"></div>
+    <div class="tib-modal-content">
+      <button type="button" class="tib-modal-close" aria-label="Schließen">×</button>
+      <img id="tib-modal-image" src="" alt="Dein generiertes Design" class="tib-modal-image">
+    </div>
+  </div>
+</section>
+
+<style>
+  .tib-simple-design {
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    overflow-x: hidden;
+  }
+
+  /* MEDIA SLIDER */
+
+  .tib-main-media-wrapper {
+    width: 100%;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .tib-media-slider {
+    position: relative;
+    width: 100%;
+    display: flex;
+    touch-action: pan-y;
+    transform: translateX(0%);
+    transition: transform 0.3s ease-out;
+  }
+
+  .tib-media-slide {
+    min-width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+  }
+
+  .tib-media-image,
+  .tib-media-video {
+    width: 100%;
+    height: auto;
+    display: block;
+    object-fit: contain;
+  }
+
+  .tib-video-badge {
+    position: absolute;
+    left: 0.75rem;
+    bottom: 1.35rem;
+    padding: 0.2rem 0.5rem;
+    background: rgba(0,0,0,0.75);
+    color: #fff;
+    font-size: 0.75rem;
+    border-radius: 999px;
+  }
+
+  .tib-media-dots {
+    position: absolute;
+    bottom: 0.4rem;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    justify-content: center;
+    gap: 0.35rem;
+    pointer-events: none;
+  }
+
+  .tib-media-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 999px;
+    border: none;
+    background: #d1d5db;
+    padding: 0;
+    cursor: pointer;
+    pointer-events: auto;
+  }
+
+  .tib-media-dot.is-active {
+    background: #111827;
+  }
+
+  .tib-inner-padding {
+    width: 100%;
+    padding-left: 1.25rem;
+    padding-right: 1.25rem;
+    padding-bottom: 1.5rem;
+    box-sizing: border-box;
+  }
+
+  @media (min-width: 768px) {
+    .tib-inner-padding {
+      padding-left: 1.75rem;
+      padding-right: 1.75rem;
+    }
+  }
+
+  .tib-product-headline {
+    margin-top: 0.75rem;
+    margin-bottom: 1rem;
+  }
+
+  .tib-product-title {
+    margin: 0 0 0.35rem;
+    font-size: 1.4rem;
+    font-weight: 700;
+  }
+
+  .tib-price-row {
+    margin: 0;
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.4rem;
+  }
+
+  .tib-price-amount {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #16a34a;
+  }
+
+  .tib-compare-price {
+    font-size: 1.2rem;
+    color: #9ca3af;
+    text-decoration: line-through;
+  }
+
+  .tib-price-subtext {
+    margin: 0.1rem 0 1rem;
+    font-size: 0.75rem;
+    color: #9ca3af;
+  }
+
+  .tib-bullets {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 1.25rem;
+  }
+
+  .tib-bullets li {
+    margin: 0 0 0.48rem;
+    font-weight: 600;
+    line-height: 1.55;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .tib-bullet-icon {
+    width: 18px;
+    height: 18px;
+    object-fit: contain;
+    flex-shrink: 0;
+  }
+
+  .tib-product-form {
+    width: 100%;
+  }
+
+  /* Upload Block */
+
+  .tib-upload-block {
+    border-radius: 12px;
+    background: #f3f4f6;
+    margin-bottom: 1.1rem;
+    overflow: hidden;
+  }
+
+  .tib-upload-header {
+    background: #e5e7eb;
+    padding: 0.6rem 0.9rem;
+    font-weight: 700;
+    font-size: 1rem;
+    text-align: center;
+  }
+
+  .tib-upload-content {
+    padding: 0.9rem 0.9rem 0.5rem;
+  }
+
+  .tib-field {
+    margin-bottom: 0.9rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+
+  .tib-field label {
+    font-weight: 600;
+    font-size: 0.9rem;
+  }
+
+  .tib-field__hint {
+    font-size: 0.8rem;
+    color: #6b7280;
+    margin: 0;
+  }
+
+  .tib-field input[type="file"] {
+    font-size: 0.9rem;
+    padding: 0.6rem 0.75rem;
+    border-radius: 999px;
+    border: 1px solid #d1d5db;
+    background: #f9fafb;
+    cursor: pointer;
+  }
+
+  .tib-field__filename {
+    font-size: 0.8rem;
+    color: #374151;
+    margin: 0;
+    min-height: 1.1em;
+    word-break: break-all;
+  }
+
+  .tib-generate-wrapper {
+    display: flex;
+    justify-content: center;
+    margin-top: 0.4rem;
+  }
+
+  .tib-generate-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.8rem 1.6rem;
+    border-radius: 999px;
+    border: none;
+    background: #111827;
+    color: #ffffff;
+    font-weight: 700;
+    font-size: 0.9rem;
+    cursor: pointer;
+    box-shadow: 0 4px 8px rgba(15, 23, 42, 0.15);
+    font-family: inherit;
+  }
+
+  .tib-generate-button[disabled] {
+    opacity: 0.6;
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+
+  .tib-generate-note {
+    margin: 0.6rem 0 0;
+    font-size: 0.78rem;
+    color: #6b7280;
+    text-align: center;
+  }
+
+  .tib-status {
+    font-size: 0.8rem;
+    margin-top: 0.4rem;
+    min-height: 1.1em;
+    color: #4b5563;
+  }
+
+  .tib-status--error {
+    color: #b91c1c;
+    text-align: left;
+  }
+
+  .tib-status--success {
+    color: #15803d;
+  }
+
+  .tib-status--center {
+    text-align: center;
+  }
+
+  .tib-loading {
+    margin-top: 0.6rem;
+    padding: 0.75rem 0.9rem;
+    border-radius: 12px;
+    background: #111827;
+    color: #f9fafb;
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+  }
+
+  .tib-loading__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .tib-loading__label {
+    font-size: 0.85rem;
+  }
+
+  .tib-loading__eta {
+    font-size: 0.78rem;
+    color: #9ca3af;
+  }
+
+  .tib-loading-bar {
+    position: relative;
+    width: 100%;
+    height: 6px;
+    border-radius: 999px;
+    background: rgba(249, 250, 251, 0.12);
+    overflow: hidden;
+  }
+
+  .tib-loading-bar__inner {
+    position: absolute;
+    left: -40%;
+    top: 0;
+    bottom: 0;
+    width: 40%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #22c55e, #4ade80, #22c55e);
+    animation: tib-loading-stripes 1.1s linear infinite;
+  }
+
+  @keyframes tib-loading-stripes {
+    0% { transform: translateX(0%); }
+    100% { transform: translateX(260%); }
+  }
+
+  .tib-loading-fact {
+    font-size: 0.78rem;
+    margin: 0;
+    color: #e5e7eb;
+  }
+
+  /* Variant-Selector */
+
+  .tib-variant-section {
+    margin-bottom: 1.25rem;
+  }
+
+  .tib-variant-option {
+    border-radius: 12px;
+    border: 1px solid #e5e7eb;
+    background: #ffffff;
+    margin-bottom: 0.75rem;
+    overflow: hidden;
+    color: #000000;
+  }
+
+  .tib-variant-header {
+    width: 100%;
+    padding: 0.9rem 1rem;
+    border: none;
+    background: #ffffff;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    color: #000000;
+  }
+
+  .tib-variant-header-label {
+    font-weight: 700;
+    font-size: 1rem;
+  }
+
+  .tib-variant-header-right {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+  }
+
+  .tib-variant-header-value {
+    font-weight: 700;
+    font-size: 1rem;
+  }
+
+  .tib-variant-header-arrow {
+    width: 16px;
+    height: 16px;
+    background-image: url({{ 'conrise-down-single-arrow.png' | asset_url }});
+    background-size: contain;
+    background-repeat: no-repeat;
+    display: inline-block;
+    transition: transform 0.18s ease;
+    transform: rotate(90deg);
+  }
+
+  .tib-variant-option:not(.is-open) .tib-variant-header-arrow {
+    transform: rotate(0deg);
+  }
+
+  .tib-variant-body {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+    gap: 0.6rem;
+    padding: 0.75rem 1rem 0.9rem;
+    background: #ffffff;
+  }
+
+  .tib-variant-option:not(.is-open) .tib-variant-body {
+    display: none;
+  }
+
+  .tib-variant-value-btn {
+    position: relative;
+    border-radius: 12px;
+    border: 1px solid #e5e7eb;
+    background: #ffffff;
+    padding: 0.4rem 0.6rem;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.35rem;
+    color: #000000;
+  }
+
+  .tib-variant-thumb-wrapper {
+    width: 100%;
+    border-radius: 10px;
+    background: #f3f4f6;
+    padding: 0.35rem;
+  }
+
+  .tib-variant-thumb {
+    width: 100%;
+    height: auto;
+    object-fit: contain;
+    display: block;
+  }
+
+  .tib-variant-value-text {
+    font-size: 0.8rem;
+  }
+
+  .tib-variant-value-btn.is-active {
+    border-color: #111827;
+    box-shadow: 0 0 0 1px #111827;
+  }
+
+  .tib-variant-value-btn.is-active::after {
+    content: '✓';
+    position: absolute;
+    top: -0.5rem;
+    right: -0.5rem;
+    width: 1.4rem;
+    height: 1.4rem;
+    border-radius: 999px;
+    background: #111827;
+    color: #ffffff;
+    font-size: 0.8rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Geschenkblock */
+
+  .tib-pre-title {
+    margin: 0 0 0.1rem;
+    font-weight: 700;
+  }
+
+  .tib-gift-block {
+    margin: 0 0 0.8rem;
+    padding: 0.6rem 0.8rem;
+    border-radius: 12px;
+    background: #f3f4f6;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+
+  .tib-gift-switch-wrapper {
+    flex-shrink: 0;
+  }
+
+  .tib-gift-switch {
+    position: relative;
+    display: inline-block;
+    width: 38px;
+    height: 20px;
+  }
+
+  .tib-gift-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .tib-gift-switch-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-color: #d1d5db;
+    transition: .3s;
+    border-radius: 999px;
+  }
+
+  .tib-gift-switch-slider:before {
+    position: absolute;
+    content: "";
+    height: 16px;
+    width: 16px;
+    left: 2px;
+    top: 2px;
+    background-color: #ffffff;
+    transition: .3s;
+    border-radius: 50%;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  }
+
+  .tib-gift-switch input:checked + .tib-gift-switch-slider {
+    background-color: #facc15;
+  }
+
+  .tib-gift-switch input:checked + .tib-gift-switch-slider:before {
+    transform: translateX(18px);
+  }
+
+  .tib-gift-main {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    flex: 1;
+  }
+
+  .tib-gift-image-wrap {
+    border-radius: 12px;
+    overflow: hidden;
+    background: #e5e7eb;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .tib-gift-image-wrap img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .tib-gift-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+  }
+
+  .tib-gift-title {
+    font-size: 0.85rem;
+    font-weight: 700;
+  }
+
+  .tib-gift-price-row {
+    display: flex;
+    align-items: baseline;
+    gap: 0.4rem;
+    font-size: 0.8rem;
+  }
+
+  .tib-gift-price-free {
+    color: #b91c1c;
+    font-weight: 800;
+  }
+
+  .tib-gift-price-compare {
+    color: #9ca3af;
+    text-decoration: line-through;
+  }
+
+  /* Lieferung + Cart */
+
+  .tib-delivery-text {
+    margin: 0 0 0.8rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #16a34a;
+    text-align: center;
+  }
+
+  .tib-cart-row {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+  }
+
+  .tib-quantity-box {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.2rem;
+    padding: 0.6rem 0.7rem;
+    border-radius: 12px;
+    border: 1px solid #e5e7eb;
+    min-width: 90px;
+  }
+
+  .tib-qty-btn {
+    border: none;
+    background: transparent;
+    font-size: 1.2rem;
+    line-height: 1;
+    cursor: pointer;
+    font-family: inherit;
+    color: #000000;
+  }
+
+  .tib-quantity-display {
+    font-weight: 700;
+    font-size: 1rem;
+  }
+
+  .tib-add-to-cart-button {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.95rem 1.6rem;
+    border-radius: 12px;
+    border: none;
+    background: #facc15;
+    color: #000000;
+    font-weight: 700;
+    font-size: 0.98rem;
+    cursor: pointer;
+    box-shadow: 0 12px 25px rgba(250, 204, 21, 0.7);
+    text-transform: uppercase;
+    font-family: inherit;
+  }
+
+  .tib-cart-success-message {
+    margin: 0.7rem 0 0;
+    font-size: 0.85rem;
+    color: #16a34a;
+    text-align: left;
+    min-height: 1.1em;
+  }
+
+  @media (max-width: 767px) {
+    .tib-cart-row {
+      flex-direction: row;
+    }
+  }
+
+  /* MODAL */
+
+  .tib-modal {
+    position: fixed;
+    inset: 0;
+    display: none;
+    z-index: 9999;
+  }
+
+  .tib-modal-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+  }
+
+  .tib-modal-content {
+    position: relative;
+    max-width: 90vw;
+    max-height: 90vh;
+    margin: auto;
+    top: 50%;
+    transform: translateY(-50%);
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 0.75rem;
+    box-shadow: 0 20px 40px rgba(15,23,42,0.35);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+  }
+
+  .tib-modal-image {
+    max-width: 100%;
+    max-height: 80vh;
+    height: auto;
+    width: auto;
+    align-self: center;
+  }
+
+  .tib-modal-close {
+    border: none;
+    background: transparent;
+    font-size: 2rem;
+    cursor: pointer;
+    align-self: flex-end;
+    margin-bottom: 0.25rem;
+    color: #000000;
+    line-height: 1;
+  }
+</style>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    console.log('[TIB] Frontend loaded');
+
+    var dogInput = document.getElementById('tib-dog-image-simple');
+    var jerseyInput = document.getElementById('tib-jersey-image-simple');
+    var generateBtn = document.getElementById('tib-generate-simple-btn');
+    var statusEl = document.getElementById('tib-simple-status');
+    var dogFilenameEl = document.getElementById('tib-dog-filename');
+    var jerseyFilenameEl = document.getElementById('tib-jersey-filename');
+    var loadingEl = document.getElementById('tib-loading');
+    var loadingFactEl = document.getElementById('tib-loading-fact');
+    var productForm = document.getElementById('tib-product-form');
+    var variantIdInput = document.getElementById('tib-variant-id');
+    var priceEl = document.getElementById('tib-price-amount');
+    var compareEl = document.getElementById('tib-compare-price');
+    var deliveryEl = document.getElementById('tib-delivery-text');
+    var qtyInput = document.getElementById('tib-quantity-input');
+    var qtyDisplay = document.getElementById('tib-quantity-display');
+    var qtyMinus = document.querySelector('.tib-qty-minus');
+    var qtyPlus = document.querySelector('.tib-qty-plus');
+    var cartSuccessEl = document.getElementById('tib-cart-success');
+
+    var modal = document.getElementById('tib-design-modal');
+    var modalOverlay = modal ? modal.querySelector('.tib-modal-overlay') : null;
+    var modalClose = modal ? modal.querySelector('.tib-modal-close') : null;
+    var modalImage = document.getElementById('tib-modal-image');
+    var lastDesignUrl = null;
+    var lastMockupUrl = null;
+
+    var STORAGE_KEY = 'tib_design_' + {{ product.id | json }};
+
+    // Backend Endpoint (überschreibbar)
+    var BACKEND_ENDPOINT = {{ section.settings.backend_endpoint | default: "https://two-picture-upload-ai-production.up.railway.app/api/tib/generate-simple" | json }};
+
+    // Mockup-Type + Prompt aus Section Settings
+    var SELECTED_MOCKUP_TYPE = {{ section.settings.mockup_type | default: "sweatshirt" | json }};
+    var SECTION_AI_PROMPT = {{ section.settings.ai_prompt | default: "" | json }};
+
+  // Referenzbild & Mockup – ausschließlich per URL aus Theme Editor
+var SECTION_REFERENCE_IMAGE_URL =
+  {{ section.settings.reference_image_url | default: "" | json }};
+
+var SECTION_CUSTOM_MOCKUP_URL =
+  {{ section.settings.custom_mockup_url | default: "" | json }};
+
+  var SHOW_LOADING_TEXTS =
+  {{ section.settings.show_loading_texts | default: true | json }};
+
+
+// Platzierung / Skalierung
+var SECTION_DESIGN_SCALE = {{ section.settings.design_scale | default: 0.6 | json }};
+var SECTION_DESIGN_POS_X = {{ section.settings.design_pos_x | default: 0.0 | json }};
+var SECTION_DESIGN_POS_Y = {{ section.settings.design_pos_y | default: -0.1 | json }};
+
+
+    // Lieferdatum: jetzt über Theme-Editor steuerbar (keine dynamischen sources im Schema!)
+    var DELIVERY_DAYS_MIN = {{ section.settings.delivery_days_min | default: 3 | json }};
+    var DELIVERY_DAYS_MAX = {{ section.settings.delivery_days_max | default: 5 | json }};
+    var DELIVERY_TEXT_PREFIX = {{ section.settings.delivery_text_prefix | default: "Lieferung bis spätestens" | json }};
+    var DELIVERY_TEXT_BETWEEN = {{ section.settings.delivery_text_between | default: "den" | json }};
+
+    // Geschenk-Elemente
+    var giftBlock = document.getElementById('tib-gift-block');
+    var giftSwitch = document.getElementById('tib-gift-switch');
+    var giftImage = document.getElementById('tib-gift-image');
+    var giftCompareEl = document.getElementById('tib-gift-compare');
+    var GIFT_VARIANT_ID = {{ section.settings.gift_variant_id | default: "" | json }};
+
+    /* MEDIA SLIDER LOGIK */
+    var slider = document.getElementById('tib-media-slider');
+    var slides = slider ? slider.querySelectorAll('.tib-media-slide') : [];
+    var dots = document.querySelectorAll('.tib-media-dot');
+    var dotsWrapper = document.getElementById('tib-media-dots');
+    var currentSlideIndex = 0;
+    var startX = null;
+
+    function setDotsVisibilityForSlide(index) {
+      if (!dotsWrapper || !slides.length) return;
+      var slide = slides[index];
+      var hasVideo = slide.querySelector('video') !== null;
+      if (hasVideo) {
+        dotsWrapper.style.display = 'none';
+      } else {
+        dotsWrapper.style.display = 'flex';
+      }
+    }
+
+    function setActiveSlide(index) {
+      if (!slides.length || !slider) return;
+      if (index < 0) index = 0;
+      if (index >= slides.length) index = slides.length - 1;
+      currentSlideIndex = index;
+
+      slider.style.transform = 'translateX(-' + (index * 100) + '%)';
+
+      slides.forEach(function(slide, i) {
+        var video = slide.querySelector('video');
+        if (video) {
+          try {
+            if (i === index) {
+              video.play().catch(function(){});
+            } else {
+              video.pause();
+            }
+          } catch(e) {}
+        }
+      });
+
+      dots.forEach(function(dot, i) {
+        dot.classList.toggle('is-active', i === index);
+      });
+
+      setDotsVisibilityForSlide(index);
+    }
+
+    dots.forEach(function(dot) {
+      dot.addEventListener('click', function() {
+        var idx = parseInt(dot.getAttribute('data-index'), 10) || 0;
+        setActiveSlide(idx);
+      });
+    });
+
+    if (slider) {
+      slider.addEventListener('touchstart', function(e) {
+        if (!e.touches || !e.touches.length) return;
+        startX = e.touches[0].clientX;
+      });
+
+      slider.addEventListener('touchend', function(e) {
+        if (startX === null || !e.changedTouches || !e.changedTouches.length) return;
+        var diff = e.changedTouches[0].clientX - startX;
+        startX = null;
+        if (Math.abs(diff) < 40) return;
+        if (diff < 0) {
+          setActiveSlide(currentSlideIndex + 1);
+        } else {
+          setActiveSlide(currentSlideIndex - 1);
+        }
+      });
+    }
+
+    // initial
+    setActiveSlide(0);
+
+    function updateFirstImageSrc(url) {
+      var mainImg = document.getElementById('tib-main-product-image');
+      if (mainImg && url) {
+        mainImg.src = url;
+        return;
+      }
+      var firstSlideImg = document.querySelector('.tib-media-slide[data-index="0"] img');
+      if (firstSlideImg && url) {
+        firstSlideImg.src = url;
+      }
+    }
+
+    /* Modal */
+    function openDesignModal(url) {
+      if (!modal || !modalImage || !url) return;
+      modalImage.src = url;
+      modal.style.display = 'block';
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeDesignModal() {
+      if (!modal) return;
+      modal.style.display = 'none';
+      document.body.style.overflow = '';
+    }
+
+    if (modalOverlay) {
+      modalOverlay.addEventListener('click', closeDesignModal);
+    }
+    if (modalClose) {
+      modalClose.addEventListener('click', closeDesignModal);
+    }
+
+    function bindViewDesignLink() {
+      var viewLink = document.getElementById('tib-view-design-link');
+      if (!viewLink) return;
+      viewLink.addEventListener('click', function(e) {
+        e.preventDefault();
+        if (lastDesignUrl) {
+          openDesignModal(lastDesignUrl);
+        }
+      });
+    }
+
+    /* Helper für Properties */
+    if (!productForm) {
+      console.warn('[TIB] tib-product-form nicht gefunden.');
+    }
+
+    function ensureHiddenInput(propertyName) {
+      if (!productForm) return null;
+      var selector = 'input[name="properties[' + propertyName + ']"]';
+      var existing = productForm.querySelector(selector);
+      if (existing) return existing;
+      var input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = 'properties[' + propertyName + ']';
+      productForm.appendChild(input);
+      return input;
+    }
+
+    var designInput = ensureHiddenInput('_tib_design_link_1');
+    var mockupInput = ensureHiddenInput('_customization_image');
+
+    function setStatus(message, type) {
+      if (!statusEl) return;
+      statusEl.textContent = '';
+      statusEl.innerHTML = '';
+      statusEl.classList.remove('tib-status--error', 'tib-status--success', 'tib-status--center');
+
+      if (!message) return;
+
+      if (type === 'error') {
+        statusEl.classList.add('tib-status--error');
+        statusEl.textContent = message;
+      } else if (type === 'success') {
+        statusEl.classList.add('tib-status--success', 'tib-status--center');
+        statusEl.innerHTML = message;
+      }
+    }
+
+    function updateFilename(input, labelEl) {
+      if (!labelEl) return;
+      if (input && input.files && input.files[0]) {
+        labelEl.textContent = input.files[0].name;
+      } else {
+        labelEl.textContent = '';
+      }
+    }
+
+    if (dogInput && dogFilenameEl) {
+      dogInput.addEventListener('change', function() {
+        updateFilename(dogInput, dogFilenameEl);
+      });
+    }
+
+    if (jerseyInput && jerseyFilenameEl) {
+      jerseyInput.addEventListener('change', function() {
+        updateFilename(jerseyInput, jerseyFilenameEl);
+      });
+    }
+
+    /* Lieferdatum (Min/Max Tage aus Theme-Editor) */
+    function renderDeliveryText() {
+      if (!deliveryEl) return;
+
+      var min = parseInt(DELIVERY_DAYS_MIN, 10);
+      var max = parseInt(DELIVERY_DAYS_MAX, 10);
+      if (isNaN(min)) min = 3;
+      if (isNaN(max)) max = min;
+
+      // Wir zeigen "bis spätestens <Wochentag> den <Datum>" basierend auf max (deadline)
+      var d = new Date();
+      d.setDate(d.getDate() + max);
+
+      var weekdays = ['Sonntag','Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag'];
+      var dayName = weekdays[d.getDay()];
+      var dateString = d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+      // optional: Range-Text (von/bis) – wenn min != max, zeigen wir "(in 3–5 Tagen)" hinten dran
+      var rangeText = '';
+      if (min !== max) {
+        rangeText = ' (in ' + min + '–' + max + ' Tagen)';
+      } else {
+        rangeText = ' (in ' + max + ' Tagen)';
+      }
+
+      deliveryEl.textContent = (DELIVERY_TEXT_PREFIX || 'Lieferung bis spätestens') + ' ' + dayName + ' ' + (DELIVERY_TEXT_BETWEEN || 'den') + ' ' + dateString + rangeText;
+    }
+    renderDeliveryText();
+
+    /* Menge & Minus-Farbe */
+    function syncQtyDisplay() {
+      var val = parseInt(qtyInput.value, 10) || 1;
+      if (val < 1) val = 1;
+      qtyInput.value = String(val);
+      qtyDisplay.textContent = String(val);
+      if (val <= 1) {
+        if (qtyMinus) qtyMinus.style.color = '#9ca3af';
+      } else {
+        if (qtyMinus) qtyMinus.style.color = '#000000';
+      }
+    }
+
+    if (qtyMinus) {
+      qtyMinus.addEventListener('click', function() {
+        var val = parseInt(qtyInput.value, 10) || 1;
+        if (val > 1) {
+          qtyInput.value = String(val - 1);
+          syncQtyDisplay();
+        }
+      });
+    }
+    if (qtyPlus) {
+      qtyPlus.addEventListener('click', function() {
+        var val = parseInt(qtyInput.value, 10) || 1;
+        qtyInput.value = String(val + 1);
+        syncQtyDisplay();
+      });
+    }
+    syncQtyDisplay();
+
+    /* Loading-Fakten */
+    var footballFacts = [
+      'Die erste offizielle Fußball-Weltmeisterschaft fand 1930 in Uruguay statt.',
+      'Ein Spiel der 5. englischen Liga dauerte 2011 3 Stunden, weil der Schiedsrichter sich verletzte und kein Ersatz da war.',
+      'In der argentinischen Liga wurde einmal ein Spiel abgebrochen, weil Hunde das Spielfeld stürmten – mehrfach.',
+      'Der größte Sieg der Länderspielgeschichte: Australien – Amerikanisch-Samoa 31:0 (2001).',
+      'Maradonas „Hand Gottes“-Ball wurde 2022 für über 2 Millionen € versteigert.',
+      'Der schnellste gemessene Schuss im Fußball erreichte über 210 km/h.',
+      'Im modernen Profifußball läuft ein Spieler im Schnitt 10–13 km pro Spiel.',
+      'Gelbe und rote Karten wurden bei der WM 1970 erstmals eingesetzt.'
+    ];
+    var factIndex = 0;
+    var factTimeout = null;
+
+    function scheduleNextFact() {
+      if (!loadingFactEl || !footballFacts.length) return;
+      var fact = footballFacts[factIndex];
+      factIndex = (factIndex + 1) % footballFacts.length;
+      loadingFactEl.textContent = fact;
+      factTimeout = setTimeout(scheduleNextFact, 5000);
+    }
+
+    function startLoading() {
+  if (!loadingEl) return;
+  if (factTimeout) clearTimeout(factTimeout);
+
+  loadingEl.style.display = 'flex';
+
+  if (SHOW_LOADING_TEXTS) {
+    scheduleNextFact();
+  } else if (loadingFactEl) {
+    loadingFactEl.textContent = '';
+  }
+}
+
+
+    function stopLoading() {
+      if (factTimeout) clearTimeout(factTimeout);
+      if (loadingEl) loadingEl.style.display = 'none';
+    }
+
+    /* Varianten */
+    var variants = {{ product.variants | json }};
+    var optionCount = {{ product.options.size }};
+    var optionContainers = document.querySelectorAll('.tib-variant-option');
+
+    function formatMoney(cents) {
+      cents = parseInt(cents, 10) || 0;
+      var euros = (cents / 100).toFixed(2).replace('.', ',');
+      return '€' + euros;
+    }
+
+    function getCurrentOptions() {
+      var result = [];
+      optionContainers.forEach(function(container) {
+        var index = parseInt(container.getAttribute('data-option-index'), 10);
+        var activeBtn = container.querySelector('.tib-variant-value-btn.is-active');
+        if (activeBtn) {
+          result[index] = activeBtn.getAttribute('data-value');
+        }
+      });
+      return result;
+    }
+
+    function findVariantByOptions(options) {
+      return variants.find(function(v) {
+        var ok = true;
+        if (optionCount > 0 && options[0] && v.option1 !== options[0]) ok = false;
+        if (optionCount > 1 && options[1] && v.option2 !== options[1]) ok = false;
+        if (optionCount > 2 && options[2] && v.option3 !== options[2]) ok = false;
+        return ok;
+      });
+    }
+
+    function updatePriceAndImageForVariant(variant) {
+      if (!variant) return;
+      if (variantIdInput) variantIdInput.value = variant.id;
+      if (priceEl) {
+        priceEl.textContent = formatMoney(variant.price);
+      }
+      if (compareEl) {
+        if (variant.compare_at_price && variant.compare_at_price > variant.price) {
+          compareEl.style.display = 'inline';
+          compareEl.textContent = formatMoney(variant.compare_at_price);
+        } else {
+          compareEl.style.display = 'none';
+        }
+      }
+      if (variant.featured_image && variant.featured_image.src && !lastMockupUrl) {
+        updateFirstImageSrc(variant.featured_image.src + '&width=2048');
+        setActiveSlide(0);
+      }
+    }
+
+    optionContainers.forEach(function(container) {
+      var header = container.querySelector('.tib-variant-header');
+      var valueButtons = container.querySelectorAll('.tib-variant-value-btn');
+      var valueLabel = container.querySelector('[data-current-value]');
+
+      if (header) {
+        header.addEventListener('click', function() {
+          container.classList.toggle('is-open');
+        });
+      }
+
+      valueButtons.forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          valueButtons.forEach(function(b) { b.classList.remove('is-active'); });
+          btn.classList.add('is-active');
+          if (valueLabel) {
+            var textNode = btn.querySelector('.tib-variant-value-text');
+            valueLabel.textContent = textNode ? textNode.textContent : btn.textContent;
+          }
+
+          var currentOptions = getCurrentOptions();
+          var variant = findVariantByOptions(currentOptions);
+          if (variant) {
+            updatePriceAndImageForVariant(variant);
+          } else {
+            setStatus({{ section.settings.variant_unavailable_text | json }}, 'error');
+          }
+        });
+      });
+    });
+
+    // Geschenkblock initialisieren: Fallback-Bild + Originalpreis
+    function initGiftBlock() {
+      if (!giftBlock || !GIFT_VARIANT_ID) return;
+      if (!giftImage || !giftCompareEl) return;
+
+      var fallbackSrc = {{ section.settings.gift_fallback_image_url | default: "https://cdn.shopify.com/s/files/1/0958/7346/6743/files/IMG_1953.jpg?v=1765551840" | json }};
+      giftImage.src = fallbackSrc;
+
+      fetch('/variants/' + GIFT_VARIANT_ID + '.js', {
+        credentials: 'same-origin'
+      })
+        .then(function(res) {
+          if (!res.ok) throw new Error('Variant ' + GIFT_VARIANT_ID + ' nicht gefunden');
+          return res.json();
+        })
+        .then(function(data) {
+          try {
+            if (data.featured_image && data.featured_image.src) {
+              var src = data.featured_image.src;
+              if (src.indexOf('width=') === -1) {
+                src += (src.indexOf('?') === -1 ? '?' : '&') + 'width=300';
+              }
+              giftImage.src = src;
+            } else {
+              giftImage.src = fallbackSrc;
+            }
+            var basePriceCents = data.compare_at_price
+              ? parseInt(data.compare_at_price, 10)
+              : parseInt(data.price, 10);
+            if (!isNaN(basePriceCents)) {
+              giftCompareEl.textContent = formatMoney(basePriceCents);
+            }
+          } catch(e) {
+            giftImage.src = fallbackSrc;
+          }
+        })
+        .catch(function(e) {
+          console.warn('[TIB] Geschenk-Variant konnte nicht geladen werden:', e);
+          giftImage.src = fallbackSrc;
+        });
+    }
+
+    // Geschenk in den Warenkorb (mit _tib_design_link_1, wenn vorhanden)
+    function addGiftToCart() {
+      if (!giftBlock || !giftSwitch || !giftSwitch.checked) return Promise.resolve();
+      if (!GIFT_VARIANT_ID) return Promise.resolve();
+
+      var props = {};
+      if (designInput && designInput.value) {
+        props['_tib_design_link_1'] = designInput.value;
+      }
+
+      return fetch('/cart/add.js', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        credentials: 'same-origin',
+        body: JSON.stringify({
+          items: [
+            {
+              id: GIFT_VARIANT_ID,
+              quantity: 1,
+              properties: props
+            }
+          ]
+        })
+      }).catch(function(e) {
+        console.warn('[TIB] Geschenk konnte nicht hinzugefügt werden:', e);
+      });
+    }
+
+    /* LocalStorage: ggf. bestehendes Design wiederherstellen */
+    try {
+      var savedRaw = localStorage.getItem(STORAGE_KEY);
+      if (savedRaw) {
+        var saved = JSON.parse(savedRaw);
+        if (saved && (saved.designUrl || saved.mockupUrl)) {
+          lastDesignUrl = saved.designUrl || null;
+          lastMockupUrl = saved.mockupUrl || null;
+
+          if (designInput && saved.designUrl) designInput.value = saved.designUrl;
+          if (mockupInput && saved.mockupUrl) mockupInput.value = saved.mockupUrl;
+
+          if (lastMockupUrl) {
+            updateFirstImageSrc(lastMockupUrl);
+            setActiveSlide(0);
+          }
+
+var restoredHtml = {{ section.settings.status_ready_html | default: "Design fertig erstellt. <a href='#' id='tib-view-design-link'><strong>Ansehen</strong></a>" | json }};
+          setStatus(restoredHtml, 'success');
+          bindViewDesignLink();
+        }
+      }
+    } catch(e) {
+      console.warn('[TIB] Konnte gespeichertes Design nicht lesen:', e);
+    }
+
+    /* Design generieren */
+    if (generateBtn) {
+      generateBtn.addEventListener('click', function(event) {
+        event.preventDefault();
+
+        if (!dogInput.files[0] || !jerseyInput.files[0]) {
+          setStatus({{ section.settings.error_missing_images | json }}, 'error');
+          setTimeout(function() {
+            setStatus('', null);
+          }, 5000);
+          return;
+        }
+
+        setStatus({{ section.settings.status_generating_text | default: "Design wird generiert …" | json }}, 'success');
+        generateBtn.disabled = true;
+        startLoading();
+
+        var formData = new FormData();
+        formData.append('dogImage', dogInput.files[0]);
+        formData.append('jerseyImage', jerseyInput.files[0]);
+        formData.append('productId', '{{ product.id }}');
+        {% if initial_variant %}
+        formData.append('variantId', '{{ initial_variant.id }}');
+        {% endif %}
+
+    
+
+
+        // WICHTIG: Overrides wirklich mitsenden (sonst nimmt Backend Defaults)
+        formData.append('referenceImageUrl', SECTION_REFERENCE_IMAGE_URL);
+formData.append('customMockupUrl', SECTION_CUSTOM_MOCKUP_URL);
+formData.append('designScale', String(SECTION_DESIGN_SCALE));
+formData.append('designPosX', String(SECTION_DESIGN_POS_X));
+formData.append('designPosY', String(SECTION_DESIGN_POS_Y));
+
+
+        fetch(BACKEND_ENDPOINT, {
+          method: 'POST',
+          body: formData
+        })
+          .then(function(response) {
+            if (!response.ok) {
+              return response.text().then(function(text) {
+                throw new Error('Server Fehler ' + response.status + ': ' + text);
+              });
+            }
+            return response.json();
+          })
+          .then(function(data) {
+            if (!data || !data.designUrl) {
+              throw new Error('Ungültige Antwort – kein designUrl enthalten');
+            }
+
+            lastDesignUrl = data.designUrl;
+            lastMockupUrl = data.mockupUrl || null;
+
+            if (lastMockupUrl) {
+              updateFirstImageSrc(lastMockupUrl);
+              setActiveSlide(0);
+            }
+
+            if (designInput) designInput.value = data.designUrl;
+            if (mockupInput && data.mockupUrl) mockupInput.value = data.mockupUrl;
+
+            try {
+              localStorage.setItem(STORAGE_KEY, JSON.stringify({
+                designUrl: lastDesignUrl,
+                mockupUrl: lastMockupUrl
+              }));
+            } catch(e) {
+              console.warn('[TIB] Konnte Design nicht in localStorage speichern:', e);
+            }
+
+var statusHtml = {{ section.settings.status_ready_html | default: "Design fertig erstellt. <a href='#' id='tib-view-design-link'><strong>Ansehen</strong></a>" | json }};
+            setStatus(statusHtml, 'success');
+            bindViewDesignLink();
+          })
+          .catch(function(error) {
+            console.error('[TIB] Fehler beim Generieren:', error);
+            setStatus(({{ section.settings.error_prefix | default: "Fehler: " | json }}) + error.message, 'error');
+          })
+          .finally(function() {
+            generateBtn.disabled = false;
+            stopLoading();
+          });
+      });
+    }
+
+    /* Cart-Counter im Header aktualisieren (best effort, theme-unabhängig) */
+    function refreshCartUI() {
+      fetch('/cart.js', {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json'
+        }
+      })
+        .then(function(res) { return res.json(); })
+        .then(function(cart) {
+          if (!cart || typeof cart.item_count === 'undefined') return;
+          var count = cart.item_count;
+
+          var els = document.querySelectorAll('[data-cart-count]');
+          els.forEach(function(el) {
+            el.textContent = count;
+          });
+
+          var bubbleEls = document.querySelectorAll('.cart-count-bubble, .cart-count');
+          bubbleEls.forEach(function(el) {
+            el.textContent = count;
+          });
+
+          try {
+            var ev = new CustomEvent('cart:refresh', { detail: { cart: cart } });
+            document.dispatchEvent(ev);
+          } catch(e) {}
+        })
+        .catch(function(err) {
+          console.warn('[TIB] Konnte Cart UI nicht refreshen:', err);
+        });
+    }
+
+    /* Add to cart via JS */
+    if (productForm) {
+      productForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        if (!variantIdInput || !variantIdInput.value) {
+          setStatus({{ section.settings.error_choose_variant | json }}, 'error');
+          return;
+        }
+
+        var formData = new FormData(productForm);
+        formData.set('id', variantIdInput.value);
+
+        fetch('/cart/add.js', {
+          method: 'POST',
+          body: formData,
+          headers: {
+            'Accept': 'application/json'
+          }
+        })
+          .then(function(res) {
+            return res.json().then(function(data) {
+              return { ok: res.ok, data: data };
+            });
+          })
+          .then(function(result) {
+            var data = result.data || {};
+            if (data.status && data.status >= 400) {
+              throw new Error(data.description || data.message || 'Fehler beim Hinzufügen zum Warenkorb');
+            }
+            if (cartSuccessEl) {
+              cartSuccessEl.textContent = {{ section.settings.cart_success_text | json }};
+            }
+
+            refreshCartUI();
+
+            var hasDesign = !!(designInput && designInput.value);
+
+            if (giftBlock && giftSwitch && giftSwitch.checked) {
+              setTimeout(function() {
+                addGiftToCart().finally(function() {
+                  refreshCartUI();
+                });
+              }, 200);
+            }
+
+            if (!hasDesign) {
+              window.location.href = '/cart';
+            }
+          })
+          .catch(function(err) {
+            console.error('[TIB] Fehler beim Add to Cart:', err);
+            if (cartSuccessEl) {
+              cartSuccessEl.textContent = {{ section.settings.cart_error_text | json }};
+            }
+          });
+      });
+    }
+
+    initGiftBlock();
+  });
+</script>
+
+{% schema %}
+{
+  "name": "Two picture upload AI",
+  "settings": [
+    {
+      "type": "header",
+      "content": "Backend & AI"
+    },
+    {
+      "type": "text",
+      "id": "backend_endpoint",
+      "label": "Backend Endpoint (Generate API)",
+      "default": "https://two-picture-upload-ai-production.up.railway.app/api/tib/generate-simple"
+    },
+    {
+      "type": "text",
+      "id": "button_label",
+      "label": "Button-Text (Design generieren)",
+      "default": "Design generieren"
+    },
+    {
+      "type": "select",
+      "id": "mockup_type",
+      "label": "Mockup-Typ (Main Produkt)",
+      "default": "sweatshirt",
+      "options": [
+        { "value": "sweatshirt", "label": "Sweatshirt (mockup-template.png)" },
+        { "value": "hoodie", "label": "Hoodie (mockup-template-hoodie.png)" },
+        { "value": "t-shirt", "label": "T-Shirt (mockup-template-t-shirt.png)" },
+        { "value": "kissen", "label": "Kissen (mockup-template-kissen.png)" },
+        { "value": "tasse", "label": "Tasse (mockup-template-tasse.png)" },
+        { "value": "fussmatte", "label": "Fußmatte (mockup-template-fussmatte.png)" },
+        { "value": "turnbeutel", "label": "Turnbeutel (mockup-template-turnbeutel.png)" }
+      ]
+    },
+    {
+      "type": "textarea",
+      "id": "ai_prompt",
+      "label": "AI Prompt (wird an Backend gesendet)",
+      "default": "Nutze die BILDER WIE FOLGT: Bild 1 = Referenzbild des fertigen Trikot-Designs (Hund im Stadion, stehende ganze Figur). Bild 2 = Foto des Hundes des Kunden (nur dieses Gesicht/Kopf verwenden). Bild 3 = Foto des leeren Trikots des Kunden. Aufgabe: Erstelle ein neues, druckfertiges Fußballtrikot-Design im Stil von Bild 1. Ersetze den Hund aus Bild 1 durch den Hund aus Bild 2, so dass der Hund vollständig von Kopf bis Pfoten im Bild zu sehen ist, nicht abgeschnitten, mit ähnlicher Körperhaltung, Proportionen und Perspektive wie in Bild 1. Der Hund soll das Trikot aus Bild 3 tragen (Farben, Streifen, Logos und Schnitt so genau wie möglich übernehmen, Text im Logo soll übernommen werden und auch angezeigt werden wenn vorhanden). Der Bildausschnitt soll dem von Bild 1 sehr ähnlich sein: Hund zentral im Vordergrund, Stadion mit Fans im Hintergrund. Schneide weder oben den Kopf noch unten die Pfoten ab. Kein Nahportrait, sondern die ganze Figur im Bild. Der Hintergrund soll im Stil von Bild 1 sein (Fußballstadion mit Fans), aber ohne zusätzliche neuen Motive, die vom Hund ablenken. Liefere ein vollflächiges Trikot-Bild mit deckendem Hintergrund (kein Transparent), geeignet für Druck und Mockups."
+    },
+
+    {
+      "type": "header",
+      "content": "Referenzbild & Mockup Overrides"
+    },
+  
+
+    {
+  "type": "text",
+  "id": "reference_image_url",
+  "label": "Referenzbild URL (Fallback)",
+  "info": "Wird genutzt, wenn oben kein Bild hochgeladen ist."
+},
+{
+  "type": "text",
+  "id": "custom_mockup_url",
+  "label": "Mockup URL (Fallback)",
+  "info": "Überschreibt jedes andere Mockup."
+},
+
+
+    {
+      "type": "header",
+      "content": "Mockup Platzierung"
+    },
+    {
+      "type": "range",
+      "id": "design_scale",
+      "label": "Design Skalierung auf Mockup",
+      "min": 0,
+      "max": 1,
+      "step": 0.1,
+      "default": 0.6
+    },
+    {
+      "type": "range",
+      "id": "design_pos_x",
+      "label": "Design Position X",
+      "info": "Höher = weiter nach rechts, niedriger = weiter nach links",
+      "min": -1,
+      "max": 1,
+      "step": 0.1,
+      "default": 0
+    },
+    {
+      "type": "range",
+      "id": "design_pos_y",
+      "label": "Design Position Y",
+      "info": "Höher = weiter nach unten, niedriger = weiter nach oben",
+      "min": -1,
+      "max": 1,
+      "step": 0.1,
+      "default": -0.1
+    },
+
+    {
+      "type": "header",
+      "content": "Texte im Block"
+    },
+    {
+      "type": "text",
+      "id": "upload_block_title",
+      "label": "Block-Überschrift",
+      "default": "Jetzt Personalisieren"
+    },
+    {
+      "type": "text",
+      "id": "dog_label",
+      "label": "Label Bild 1",
+      "default": "1. Bild von deinem Hund"
+    },
+    {
+      "type": "text",
+      "id": "dog_hint",
+      "label": "Hinweis Bild 1",
+      "default": "Am besten ein gut beleuchtetes Foto, auf dem dein Hund klar zu sehen ist."
+    },
+    {
+      "type": "text",
+      "id": "jersey_label",
+      "label": "Label Bild 2",
+      "default": "2. Bild des Trikots"
+    },
+    {
+      "type": "text",
+      "id": "jersey_hint",
+      "label": "Hinweis Bild 2",
+      "default": "Lade das Trikot hoch, das dein Hund im endgültigen Bild tragen soll."
+    },
+    {
+      "type": "text",
+      "id": "generate_note",
+      "label": "Hinweis unter Button",
+      "default": "Design wird nach Generierung oben angezeigt."
+    },
+    {
+      "type": "text",
+      "id": "loading_label",
+      "label": "Loading Titel",
+      "default": "Design wird generiert …"
+    },
+    {
+      "type": "text",
+      "id": "loading_eta_text",
+      "label": "Loading ETA Text",
+      "default": "ca. 1 Min."
+    },
+    {
+      "type": "text",
+      "id": "add_to_cart_label",
+      "label": "Button-Text (Add to Cart)",
+      "default": "IN DEN WARENKORB"
+    },
+    {
+      "type": "text",
+      "id": "bullet_1_text",
+      "label": "Bullet 1 Text",
+      "default": "Versandfertig in unter 24h"
+    },
+    {
+      "type": "text",
+      "id": "bullet_2_text",
+      "label": "Bullet 2 Text",
+      "default": "Bedruckt in Deutschland"
+    },
+
+    {
+      "type": "header",
+      "content": "Liefertext"
+    },
+    {
+      "type": "text",
+      "id": "delivery_text_prefix",
+      "label": "Prefix",
+      "default": "Lieferung bis spätestens"
+    },
+    {
+      "type": "text",
+      "id": "delivery_text_between",
+      "label": "Zwischenwort",
+      "default": "den"
+    },
+    {
+      "type": "range",
+      "id": "delivery_days_min",
+      "label": "Lieferdauer von (Tage)",
+      "min": 0,
+      "max": 30,
+      "step": 1,
+      "default": 3
+    },
+    {
+      "type": "range",
+      "id": "delivery_days_max",
+      "label": "Lieferdauer bis (Tage)",
+      "min": 0,
+      "max": 30,
+      "step": 1,
+      "default": 5
+    },
+
+    {
+      "type": "header",
+      "content": "Status-/Fehlertexte"
+    },
+    {
+      "type": "text",
+      "id": "error_missing_images",
+      "label": "Fehler: Bilder fehlen",
+      "default": "Bitte lade erst ein Bild von deinem Hund und einem Trikot hoch!"
+    },
+    {
+      "type": "text",
+      "id": "status_generating_text",
+      "label": "Status: Generierung läuft",
+      "default": "Design wird generiert …"
+    },
+    {
+      "type": "textarea",
+      "id": "status_ready_html",
+      "label": "Status: Fertig (HTML erlaubt)",
+      "default": "Design fertig erstellt. <a href=\"#\" id=\"tib-view-design-link\"><strong>Ansehen</strong></a>"
+    },
+    {
+      "type": "text",
+      "id": "error_prefix",
+      "label": "Fehler Prefix",
+      "default": "Fehler: "
+    },
+    {
+      "type": "text",
+      "id": "variant_unavailable_text",
+      "label": "Fehler: Variante nicht verfügbar",
+      "default": "Diese Variante ist nicht verfügbar."
+    },
+    {
+      "type": "text",
+      "id": "error_choose_variant",
+      "label": "Fehler: Keine Variante gewählt",
+      "default": "Bitte zuerst eine Variante wählen."
+    },
+    {
+      "type": "text",
+      "id": "cart_success_text",
+      "label": "Cart: Erfolg",
+      "default": "Erfolgreich zum Warenkorb hinzugefügt."
+    },
+    {
+      "type": "text",
+      "id": "cart_error_text",
+      "label": "Cart: Fehler",
+      "default": "Fehler beim Hinzufügen zum Warenkorb."
+    },
+
+    {
+      "type": "header",
+      "content": "Geschenk"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_gift",
+      "label": "Geschenk anzeigen",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "gift_title",
+      "label": "Geschenk-Titel",
+      "default": "Fußball Hund Tasse"
+    },
+    {
+      "type": "text",
+      "id": "gift_variant_id",
+      "label": "Geschenk-Varianten-ID",
+      "default": "56348689564023"
+    },
+    {
+      "type": "text",
+      "id": "gift_free_price_text",
+      "label": "Preis-Text (gratis)",
+      "default": "0,00 €"
+    },
+    {
+      "type": "text",
+      "id": "gift_fallback_image_url",
+      "label": "Fallback Bild-URL (Geschenk)",
+      "default": "https://cdn.shopify.com/s/files/1/0958/7346/6743/files/IMG_1953.jpg?v=1765551840"
+    },
+    {
+      "type": "range",
+      "id": "gift_image_size",
+      "label": "Größe des Geschenk-Bildes (px)",
+      "min": 40,
+      "max": 120,
+      "step": 2,
+      "default": 52
+    },
+    {
+      "type": "checkbox",
+      "id": "show_pre_title",
+      "label": "Überschrift in Geschenkbox anzeigen",
+      "default": false
+    },
+    {
+      "type": "text",
+      "id": "pre_title_text",
+      "label": "Überschrift-Text (Geschenkbox)",
+      "default": "Nur für kurze Zeit kostenlos dazu"
+    },
+    {
+      "type": "color",
+      "id": "pre_title_color",
+      "label": "Überschrift-Farbe (Geschenkbox)",
+      "default": "#111827"
+    },
+    {
+      "type": "range",
+      "id": "pre_title_font_size",
+      "label": "Überschrift-Schriftgröße (px)",
+      "min": 10,
+      "max": 30,
+      "step": 1,
+      "default": 14
+    },
+
+    {
+  "type": "checkbox",
+  "id": "show_loading_texts",
+  "label": "Loading-Texte anzeigen",
+  "default": true
+}
+
+  ],
+  "presets": [
+    {
+      "name": "Two picture upload AI"
+    }
+  ]
+}
+{% endschema %}
